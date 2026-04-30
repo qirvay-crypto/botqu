@@ -80,25 +80,75 @@
             font-weight: 500;
         }
 
-        .form-group input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
             transition: all 0.3s;
+            position: relative;
         }
 
-        .form-group input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
+        .upload-area:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.drag-over {
+            background: #e8ebff;
+            border-color: #10b981;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text strong {
+            color: #667eea;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #333;
+            word-break: break-all;
+            display: none;
+        }
+
+        .file-name.show {
+            display: block;
+        }
+
+        .remove-file {
+            color: #ef4444;
+            cursor: pointer;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        input[type="file"] {
+            display: none;
         }
 
         .file-info {
             background: #f5f5f5;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 12px;
             color: #666;
         }
@@ -149,6 +199,15 @@
         .btn-success:hover:not(:disabled) {
             background: #059669;
             transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #4b5563;
         }
 
         .btn:disabled {
@@ -298,9 +357,23 @@
             <div class="card">
                 <div class="card-title">🎮 Control Panel</div>
                 
+                <!-- Upload Area -->
                 <div class="form-group">
-                    <label>📁 Path File Excel</label>
-                    <input type="text" id="excelPath" placeholder="C:\path\to\your\file.xlsx">
+                    <label>📁 Upload File Excel</label>
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">📊</div>
+                        <div class="upload-text">
+                            Klik atau drag & drop file Excel di sini
+                        </div>
+                        <div class="upload-text">
+                            <strong>Format:</strong> .xlsx atau .xls
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls">
+                    <div class="file-name" id="fileName">
+                        📄 <span id="fileNameText"></span>
+                        <span class="remove-file" onclick="removeFile(event)">✖ Hapus</span>
+                    </div>
                     <div class="file-info">
                         💡 Format Excel yang diperlukan:<br>
                         Kolom 1: KPJ<br>
@@ -350,13 +423,13 @@
                 <div class="card-title">📊 Status & Logs</div>
                 
                 <div id="statusContainer">
-                    <div class="status info">ℹ️ Bot belum dimulai</div>
+                    <div class="status info">ℹ️ Upload file Excel untuk memulai</div>
                 </div>
                 
                 <div class="logs-container" id="logsContainer">
                     <div class="log-entry info">
                         <span class="log-time">[System]</span>
-                        Bot siap digunakan
+                        Silakan upload file Excel terlebih dahulu
                     </div>
                 </div>
             </div>
@@ -366,13 +439,88 @@
     <script>
         // Global variables
         let updateInterval = null;
+        let uploadedFilePath = null;
+        
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileNameDiv = document.getElementById('fileName');
+        const fileNameText = document.getElementById('fileNameText');
+        
+        // Drag & drop events
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+        
+        async function handleFileUpload(file) {
+            const validExtensions = ['.xlsx', '.xls'];
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validExtensions.includes(fileExt)) {
+                addLog('File harus berformat .xlsx atau .xls', 'error');
+                return;
+            }
+            
+            addLog(`Uploading file: ${file.name}...`, 'info');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    uploadedFilePath = data.file_path;
+                    fileNameText.textContent = file.name;
+                    fileNameDiv.classList.add('show');
+                    addLog(`File berhasil diupload: ${file.name}`, 'success');
+                    document.getElementById('startBtn').disabled = false;
+                } else {
+                    addLog(`Upload gagal: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`Upload error: ${error.message}`, 'error');
+            }
+        }
+        
+        function removeFile(event) {
+            event.stopPropagation();
+            uploadedFilePath = null;
+            fileNameDiv.classList.remove('show');
+            fileInput.value = '';
+            addLog('File dihapus', 'info');
+            document.getElementById('startBtn').disabled = true;
+        }
         
         // Start bot
         async function startBot() {
-            const excelPath = document.getElementById('excelPath').value;
-            
-            if (!excelPath) {
-                addLog('Silakan masukkan path file Excel', 'error');
+            if (!uploadedFilePath) {
+                addLog('Silakan upload file Excel terlebih dahulu', 'error');
                 return;
             }
             
@@ -389,7 +537,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ excel_path: excelPath })
+                    body: JSON.stringify({ excel_path: uploadedFilePath })
                 });
                 
                 const data = await response.json();
@@ -459,7 +607,7 @@
                     updateUI(data);
                     
                     // Check if bot finished
-                    if (data.status.includes('selesai') || data.status.includes('dihentikan')) {
+                    if (data.status && (data.status.includes('selesai') || data.status.includes('dihentikan'))) {
                         if (updateInterval) {
                             clearInterval(updateInterval);
                             updateInterval = null;
@@ -468,7 +616,7 @@
                         document.getElementById('stopBtn').disabled = true;
                         
                         // Enable download if has result
-                        if (data.total > 0) {
+                        if (data.total > 0 || data.processed_count > 0) {
                             document.getElementById('downloadBtn').disabled = false;
                         }
                     }
@@ -481,23 +629,27 @@
         // Update UI
         function updateUI(data) {
             // Update progress bar
-            const percentage = data.total > 0 ? (data.current / data.total * 100) : 0;
+            const total = data.total || data.processed_count || 0;
+            const current = data.current || data.processed || 0;
+            const percentage = total > 0 ? (current / total * 100) : 0;
             const progressBar = document.getElementById('progressBar');
             progressBar.style.width = `${percentage}%`;
             progressBar.textContent = `${Math.round(percentage)}%`;
             
             // Update stats
-            document.getElementById('processedCount').textContent = data.current;
-            document.getElementById('successCount').textContent = data.success;
-            document.getElementById('failedCount').textContent = data.failed;
+            document.getElementById('processedCount').textContent = current;
+            document.getElementById('successCount').textContent = data.success || 0;
+            document.getElementById('failedCount').textContent = data.failed || 0;
             
             // Update status
             const statusContainer = document.getElementById('statusContainer');
-            const statusClass = data.is_success ? 'success' : 'error';
-            const statusIcon = data.is_success ? '✅' : '❌';
+            const statusText = data.status || 'Bot sedang berjalan...';
+            const isSuccess = data.is_success !== false;
+            const statusClass = isSuccess ? 'success' : 'error';
+            const statusIcon = isSuccess ? '✅' : '❌';
             statusContainer.innerHTML = `
                 <div class="status ${statusClass}">
-                    ${statusIcon} ${data.status}
+                    ${statusIcon} ${escapeHtml(statusText)}
                 </div>
             `;
             
@@ -509,7 +661,7 @@
                     const icon = log.is_success ? '✅' : '❌';
                     return `
                         <div class="log-entry ${logClass}">
-                            <span class="log-time">[${log.timestamp}]</span>
+                            <span class="log-time">[${log.timestamp || log.time || 'System'}]</span>
                             ${icon} ${escapeHtml(log.message)}
                         </div>
                     `;
@@ -547,7 +699,6 @@
         
         // Auto-refresh when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            // Check if bot is running on load
             startPolling();
         });
     </script>
