@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPJS Scrapper Bot - LASIK</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        /* Card Style */
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        /* Form Group */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Progress Section */
+        .progress-section {
+            margin-top: 20px;
+        }
+
+        .progress-bar-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 30px;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Status */
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+
+        /* Logs */
+        .logs-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-left: 3px solid;
+            border-radius: 4px;
+        }
+
+        .log-entry.success {
+            background: #064e3b;
+            color: #a7f3d0;
+            border-left-color: #10b981;
+        }
+
+        .log-entry.error {
+            background: #7f1d1d;
+            color: #fecaca;
+            border-left-color: #ef4444;
+        }
+
+        .log-entry.info {
+            background: #1e3a8a;
+            color: #bfdbfe;
+            border-left-color: #3b82f6;
+        }
+
+        .log-time {
+            color: #9ca3af;
+            margin-right: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 BPJS Scrapper Bot - LASIK</h1>
+            <p>Automatic saldo JHT checker for BPJS Ketenagakerjaan</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Control Panel -->
+            <div class="card">
+                <div class="card-title">🎮 Control Panel</div>
+                
+                <div class="form-group">
+                    <label>📁 Path File Excel</label>
+                    <input type="text" id="excelPath" placeholder="C:\path\to\your\file.xlsx">
+                    <div class="file-info">
+                        💡 Format Excel yang diperlukan:<br>
+                        Kolom 1: KPJ<br>
+                        Kolom 2: Nama<br>
+                        Kolom 3: NIK<br>
+                        Kolom 4: Kelurahan
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="startBtn" onclick="startBot()">
+                        🚀 Start Bot
+                    </button>
+                    <button class="btn btn-danger" id="stopBtn" onclick="stopBot()" disabled>
+                        ⏹ Stop Bot
+                    </button>
+                    <button class="btn btn-success" id="downloadBtn" onclick="downloadResult()" disabled>
+                        💾 Download Hasil
+                    </button>
+                </div>
+
+                <!-- Progress -->
+                <div class="progress-section">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+                    </div>
+                    
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="processedCount">0</div>
+                            <div class="stat-label">Data Diproses</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="successCount">0</div>
+                            <div class="stat-label">Berhasil</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="failedCount">0</div>
+                            <div class="stat-label">Gagal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status & Logs -->
+            <div class="card">
+                <div class="card-title">📊 Status & Logs</div>
+                
+                <div id="statusContainer">
+                    <div class="status info">ℹ️ Bot belum dimulai</div>
+                </div>
+                
+                <div class="logs-container" id="logsContainer">
+                    <div class="log-entry info">
+                        <span class="log-time">[System]</span>
+                        Bot siap digunakan
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let updateInterval = null;
+        
+        // Start bot
+        async function startBot() {
+            const excelPath = document.getElementById('excelPath').value;
+            
+            if (!excelPath) {
+                addLog('Silakan masukkan path file Excel', 'error');
+                return;
+            }
+            
+            // Disable start button, enable stop button
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('downloadBtn').disabled = true;
+            
+            addLog('Memulai bot...', 'info');
+            
+            try {
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ excel_path: excelPath })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addLog('Bot berhasil dimulai', 'success');
+                    startPolling();
+                } else {
+                    addLog(`Error: ${data.error}`, 'error');
+                    // Re-enable buttons
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                }
+            } catch (error) {
+                addLog(`Error: ${error.message}`, 'error');
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+            }
+        }
+        
+        // Stop bot
+        async function stopBot() {
+            addLog('Menghentikan bot...', 'info');
+            
+            try {
+                const response = await fetch('/api/stop', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                addLog('Bot dihentikan', 'success');
+                
+                // Update UI
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                
+                if (updateInterval) {
+                    clearInterval(updateInterval);
+                    updateInterval = null;
+                }
+            } catch (error) {
+                addLog(`Error stopping bot: ${error.message}`, 'error');
+            }
+        }
+        
+        // Download result
+        async function downloadResult() {
+            try {
+                window.location.href = '/api/download';
+                addLog('Mengunduh file hasil...', 'success');
+            } catch (error) {
+                addLog(`Error downloading: ${error.message}`, 'error');
+            }
+        }
+        
+        // Polling status
+        function startPolling() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            
+            updateInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    
+                    updateUI(data);
+                    
+                    // Check if bot finished
+                    if (data.status.includes('selesai') || data.status.includes('dihentikan')) {
+                        if (updateInterval) {
+                            clearInterval(updateInterval);
+                            updateInterval = null;
+                        }
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('stopBtn').disabled = true;
+                        
+                        // Enable download if has result
+                        if (data.total > 0) {
+                            document.getElementById('downloadBtn').disabled = false;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching status:', error);
+                }
+            }, 1000);
+        }
+        
+        // Update UI
+        function updateUI(data) {
+            // Update progress bar
+            const percentage = data.total > 0 ? (data.current / data.total * 100) : 0;
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${percentage}%`;
+            progressBar.textContent = `${Math.round(percentage)}%`;
+            
+            // Update stats
+            document.getElementById('processedCount').textContent = data.current;
+            document.getElementById('successCount').textContent = data.success;
+            document.getElementById('failedCount').textContent = data.failed;
+            
+            // Update status
+            const statusContainer = document.getElementById('statusContainer');
+            const statusClass = data.is_success ? 'success' : 'error';
+            const statusIcon = data.is_success ? '✅' : '❌';
+            statusContainer.innerHTML = `
+                <div class="status ${statusClass}">
+                    ${statusIcon} ${data.status}
+                </div>
+            `;
+            
+            // Update logs
+            if (data.logs && data.logs.length > 0) {
+                const logsContainer = document.getElementById('logsContainer');
+                logsContainer.innerHTML = data.logs.map(log => {
+                    const logClass = log.is_success ? 'success' : 'error';
+                    const icon = log.is_success ? '✅' : '❌';
+                    return `
+                        <div class="log-entry ${logClass}">
+                            <span class="log-time">[${log.timestamp}]</span>
+                            ${icon} ${escapeHtml(log.message)}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // Add log manually
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('logsContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `
+                <span class="log-time">[${timestamp}]</span>
+                ${icon} ${escapeHtml(message)}
+            `;
+            
+            logsContainer.insertBefore(logEntry, logsContainer.firstChild);
+            
+            // Keep only last 100 logs
+            while (logsContainer.children.length > 100) {
+                logsContainer.removeChild(logsContainer.lastChild);
+            }
+        }
+        
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Auto-refresh when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if bot is running on load
+            startPolling();
+        });
+    </script>
+</body>
+</html>
