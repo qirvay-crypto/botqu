@@ -130,24 +130,27 @@ def log(message, is_success=True):
     prefix = "✅" if is_success else "❌"
     print(f"{timestamp} {prefix} {message}")
 
+from selenium.webdriver.chrome.service import Service
+
 def init_driver():
     global driver, wait
     
     opt = Options()
     
-    # 🔥 WAJIB DI VPS
     opt.add_argument("--headless=new")
     opt.add_argument("--no-sandbox")
     opt.add_argument("--disable-dev-shm-usage")
     opt.add_argument("--disable-gpu")
     opt.add_argument("--window-size=1920,1080")
     
-    # tambahan (opsional)
-    opt.add_argument("--disable-blink-features=AutomationControlled")
-    opt.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
-    opt.add_experimental_option('useAutomationExtension', False)
-    
-    driver = webdriver.Chrome(options=opt)
+    # tambahan penting
+    opt.add_argument("--disable-software-rasterizer")
+    opt.add_argument("--remote-debugging-port=9222")
+
+    # 🔥 INI YANG KAMU TANYA (TARUH DI SINI)
+    service = Service("/usr/bin/chromedriver")
+    driver = webdriver.Chrome(service=service, options=opt)
+
     wait = WebDriverWait(driver, 15)
     return driver
 
