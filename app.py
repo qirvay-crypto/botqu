@@ -142,15 +142,16 @@ def init_driver():
     opt.add_argument("--disable-dev-shm-usage")
     opt.add_argument("--disable-gpu")
     opt.add_argument("--window-size=1920,1080")
-    
-    # tambahan penting
     opt.add_argument("--disable-software-rasterizer")
     opt.add_argument("--remote-debugging-port=9222")
-
-    # 🔥 INI YANG KAMU TANYA (TARUH DI SINI)
+    
+    # 🔥 INI YANG DIUBAH - pakai Chromium, bukan Google Chrome
     service = Service("/usr/bin/chromedriver")
+    
+    # KASIH TAHU dimana binary Chromium
+    opt.binary_location = "/snap/bin/chromium"
+    
     driver = webdriver.Chrome(service=service, options=opt)
-
     wait = WebDriverWait(driver, 15)
     return driver
 
