@@ -134,11 +134,7 @@ def init_driver():
     global driver, wait
     
     opt = Options()
-opt.add_argument("--headless=new")
-opt.add_argument("--no-sandbox")
-opt.add_argument("--disable-dev-shm-usage")
-opt.add_argument("--disable-gpu")
-opt.add_argument("--window-size=1920,1080")
+    opt.add_argument("--start-maximized")
     opt.add_argument("--disable-blink-features=AutomationControlled")
     opt.add_argument("--no-sandbox")
     opt.add_argument("--disable-dev-shm-usage")
