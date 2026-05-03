@@ -134,14 +134,18 @@ def init_driver():
     global driver, wait
     
     opt = Options()
-    opt.add_argument("--start-maximized")
-    opt.add_argument("--disable-blink-features=AutomationControlled")
+    
+    # 🔥 WAJIB DI VPS
+    opt.add_argument("--headless=new")
     opt.add_argument("--no-sandbox")
     opt.add_argument("--disable-dev-shm-usage")
     opt.add_argument("--disable-gpu")
+    opt.add_argument("--window-size=1920,1080")
+    
+    # tambahan (opsional)
+    opt.add_argument("--disable-blink-features=AutomationControlled")
     opt.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
     opt.add_experimental_option('useAutomationExtension', False)
-    opt.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     driver = webdriver.Chrome(options=opt)
     wait = WebDriverWait(driver, 15)
