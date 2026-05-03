@@ -136,7 +136,6 @@ def init_driver():
     global driver, wait
     
     opt = Options()
-    
     opt.add_argument("--headless=new")
     opt.add_argument("--no-sandbox")
     opt.add_argument("--disable-dev-shm-usage")
@@ -145,16 +144,16 @@ def init_driver():
     opt.add_argument("--disable-software-rasterizer")
     opt.add_argument("--remote-debugging-port=9222")
     
-    # 🔥 INI YANG DIUBAH - pakai Chromium, bukan Google Chrome
-    service = Service("/usr/bin/chromedriver")
-    
-    # KASIH TAHU dimana binary Chromium
+    # 🔥 PAKAI CHROMIUM, BUKAN GOOGLE CHROME
     opt.binary_location = "/snap/bin/chromium"
+    
+    # 🔥 PAKAI CHROMEDRIVER YANG SUDAH ADA
+    service = Service("/usr/bin/chromedriver")
     
     driver = webdriver.Chrome(service=service, options=opt)
     wait = WebDriverWait(driver, 15)
     return driver
-
+    
 def open_lasik_page():
     global driver
     print("🌐 Membuka halaman LASIK...")
