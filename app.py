@@ -130,28 +130,34 @@ def log(message, is_success=True):
     prefix = "✅" if is_success else "❌"
     print(f"{timestamp} {prefix} {message}")
 
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
 
 def init_driver():
     global driver, wait
-    
+
     opt = Options()
+    
+    # 🔥 WAJIB
+    opt.binary_location = "/usr/bin/google-chrome-stable"
+
     opt.add_argument("--headless=new")
     opt.add_argument("--no-sandbox")
     opt.add_argument("--disable-dev-shm-usage")
     opt.add_argument("--disable-gpu")
     opt.add_argument("--window-size=1920,1080")
-    opt.add_argument("--disable-software-rasterizer")
+    
+    # tambahan biar stabil
     opt.add_argument("--remote-debugging-port=9222")
-    
-    # 🔥 PAKAI CHROMIUM, BUKAN GOOGLE CHROME
-    opt.binary_location = "/usr/bin/google-chrome-stable"
-    
-    # 🔥 PAKAI CHROMEDRIVER YANG SUDAH ADA
+    opt.add_argument("--disable-software-rasterizer")
+
     service = Service("/usr/bin/chromedriver")
-    
+
     driver = webdriver.Chrome(service=service, options=opt)
     wait = WebDriverWait(driver, 15)
+
     return driver
     
 def open_lasik_page():
