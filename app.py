@@ -145,7 +145,7 @@ def init_driver():
     opt.add_argument("--remote-debugging-port=9222")
     
     # 🔥 PAKAI CHROMIUM, BUKAN GOOGLE CHROME
-    opt.binary_location = "/usr/bin/google-chrome"
+    opt.binary_location = "/usr/bin/google-chrome-stable"
     
     # 🔥 PAKAI CHROMEDRIVER YANG SUDAH ADA
     service = Service("/usr/bin/chromedriver")
