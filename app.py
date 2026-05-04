@@ -5,8 +5,6 @@ import json
 import datetime
 import re
 import threading
-import os
-os.environ["PATH"] += ":/usr/bin"
 from flask import Flask, render_template, request, Response, send_file, jsonify
 
 from selenium import webdriver
@@ -14,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, WebDriverException, StaleElementReferenceException
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -132,36 +131,41 @@ def log(message, is_success=True):
     prefix = "✅" if is_success else "❌"
     print(f"{timestamp} {prefix} {message}")
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-
+# ============================================================
+# 🔥 INI ADALAH KONFIGURASI SELENIUM YANG BENAR
+# ============================================================
 def init_driver():
     global driver, wait
 
+    print("🔥 INIT DRIVER DIPANGGIL")
+
     opt = Options()
     
-    # 🔥 WAJIB
+    # 🔥 WAJIB - Binary Chrome
     opt.binary_location = "/usr/bin/google-chrome-stable"
 
+    # 🔥 WAJIB - Argument untuk headless mode di Linux server
     opt.add_argument("--headless=new")
     opt.add_argument("--no-sandbox")
     opt.add_argument("--disable-dev-shm-usage")
     opt.add_argument("--disable-gpu")
     opt.add_argument("--window-size=1920,1080")
     
-    # tambahan biar stabil
+    # Tambahan biar lebih stabil
     opt.add_argument("--remote-debugging-port=9222")
     opt.add_argument("--disable-software-rasterizer")
-
+    opt.add_argument("--disable-blink-features=AutomationControlled")
+    opt.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
+    
+    # Service untuk ChromeDriver
     service = Service("/usr/bin/chromedriver")
 
     driver = webdriver.Chrome(service=service, options=opt)
     wait = WebDriverWait(driver, 15)
 
+    print("🔥 DRIVER JALAN DENGAN:", opt.binary_location)
     return driver
-    
+
 def open_lasik_page():
     global driver
     print("🌐 Membuka halaman LASIK...")
@@ -634,46 +638,6 @@ def detect_jmo_status(nik, nama, kelurahan):
         print(f"⚠️ Error deteksi JMO: {str(ex)}")
         return "ERROR DETEKSI"
 
-# ============================================================
-# 🔥 FUNGSI SHOW CONFIRMATION - TIDAK MENGHENTIKAN PROSES
-# ============================================================
-def show_console_confirmation(message):
-    """Tampilkan konfirmasi di console - TANPA MENUNGGU INPUT"""
-    global AUTO_MODE
-    
-    try:
-        print("\n" + "█"*80)
-        print("██" + " "*76 + "██")
-        
-        lines = message.split('\n')
-        for line in lines:
-            centered_line = line.ljust(76)[:76]
-            print(f"██ {centered_line} ██")
-        
-        print("██" + " "*76 + "██")
-        
-        if AUTO_MODE:
-            print("██ " + "🔄 AUTO MODE: LANJUT KE DATA BERIKUTNYA...".ljust(76) + " ██")
-        else:
-            print("██ " + "TEKAN ENTER UNTUK MELANJUTKAN...".ljust(76) + " ██")
-        
-        print("██" + " "*76 + "██")
-        print("█"*80 + "\n")
-        
-        # 🔥 JANGAN PAKAI input() - LANGSUNG LANJUT
-        if not AUTO_MODE:
-            try:
-                input()
-            except:
-                pass
-        else:
-            time.sleep(1)  # Jeda singkat agar terbaca
-        
-        return True
-    except Exception as ex:
-        print(f"⚠️ Error: {str(ex)}")
-        return False
-
 def process_row(row_num, kpj, nama, nik, kelurahan):
     """Proses satu baris data"""
     global sukses_count, gagal_count
@@ -751,7 +715,12 @@ def process_row(row_num, kpj, nama, nik, kelurahan):
             
             return False, "GAGAL", "Rp 0", "GAGAL - POPUP VALIDASI", "-"
         
-        # Tidak ada popup
+        # Tidak ada popup, coba extract saldo
+        saldo = extract_saldo_jht()
+        if saldo != "Rp 0":
+            nama_pt = extract_nama_pt()
+            return True, "SUKSES", saldo, "AKTIF", nama_pt
+        
         return False, "GAGAL", "Rp 0", "TIDAK ADA RESPON", "-"
         
     except Exception as ex:
@@ -776,7 +745,8 @@ def save_to_excel(output_path, excel_file_path):
             output_ws.cell(row=1, column=col, value=ws.cell(row=1, column=col).value)
         
         output_ws.cell(row=1, column=ws.max_column + 1, value="SALDO JHT")
-        output_ws.cell(row=1, column=ws.max_column + 2, value="NAMA PERUSAHAAN")
+        output_ws.cell(row=1, column=ws.max_column + 2, value="STATUS JMO")
+        output_ws.cell(row=1, column=ws.max_column + 3, value="NAMA PERUSAHAAN")
         
         data_dengan_saldo = [row for row in processed_rows if row.saldo_jht != "Rp 0"]
         
@@ -791,7 +761,8 @@ def save_to_excel(output_path, excel_file_path):
                     output_ws.cell(row=output_row, column=col, value=ws.cell(row=row_data.row_number, column=col).value)
             
             output_ws.cell(row=output_row, column=ws.max_column + 1, value=row_data.saldo_jht)
-            output_ws.cell(row=output_row, column=ws.max_column + 2, value=row_data.nama_pt)
+            output_ws.cell(row=output_row, column=ws.max_column + 2, value=row_data.status_jmo)
+            output_ws.cell(row=output_row, column=ws.max_column + 3, value=row_data.nama_pt)
             output_row += 1
         
         output_wb.save(output_path)
@@ -821,7 +792,311 @@ def save_to_excel(output_path, excel_file_path):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template_string('''<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPJS LASIK Bot - JMO Checker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-card h3 { font-size: 14px; opacity: 0.9; margin-bottom: 10px; }
+        .stat-card p { font-size: 32px; font-weight: bold; }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        .upload-area:hover { border-color: #667eea; background: #f8f9ff; }
+        input[type="file"] { margin: 15px 0; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-stop { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .log-area {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry { margin-bottom: 5px; }
+        .log-success { color: #4ec9b0; }
+        .log-error { color: #f48771; }
+        .log-info { color: #569cd6; }
+        .btn-group { margin: 20px 0; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🏦 BPJS LASIK - JMO Checker</h1>
+    <p class="subtitle">Automatic Saldo JHT & Participant Status Checker</p>
+    
+    <div class="stats">
+        <div class="stat-card"><h3>📋 Total Data</h3><p id="totalData">0</p></div>
+        <div class="stat-card"><h3>✅ Berhasil</h3><p id="successCount">0</p></div>
+        <div class="stat-card"><h3>❌ Gagal</h3><p id="failCount">0</p></div>
+        <div class="stat-card"><h3>💰 With Saldo</h3><p id="saldoCount">0</p></div>
+    </div>
+    
+    <div class="upload-area">
+        <h3>📥 Upload File Excel</h3>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        <br>
+        <small>Support semua kolom (auto detect NIK, KPJ, Nama)</small>
+    </div>
+    
+    <div class="btn-group">
+        <button id="startBtn" onclick="startProcess()">🚀 Mulai Proses</button>
+        <button id="stopBtn" onclick="stopProcess()" class="btn-stop">⛔ Berhenti</button>
+        <button id="downloadBtn" onclick="downloadResult()" disabled>📥 Download Hasil</button>
+    </div>
+    
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressBar">0%</div>
+    </div>
+    
+    <div class="log-area" id="logArea">
+        <div class="log-entry log-info">📋 Siap menunggu perintah...</div>
+    </div>
+</div>
+
+<script>
+    let eventSource = null;
+    let totalProcessed = 0;
+    let successTotal = 0;
+    let failTotal = 0;
+    let saldoTotal = 0;
+    
+    document.getElementById('fileInput').addEventListener('change', uploadFile);
+    
+    function uploadFile() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        addLog('📤 Mengupload file...', 'info');
+        
+        fetch('/upload', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    addLog('❌ Error: ' + data.error, 'error');
+                } else {
+                    document.getElementById('totalData').innerText = data.total;
+                    addLog('✅ File loaded: ' + data.total + ' data', 'success');
+                    if (data.detected_columns) {
+                        addLog('📊 Deteksi kolom - NIK: Kolom ' + data.detected_columns.nik + 
+                               ', KPJ: Kolom ' + data.detected_columns.kpj, 'info');
+                    }
+                }
+            })
+            .catch(err => addLog('❌ Upload error: ' + err.message, 'error'));
+    }
+    
+    function startProcess() {
+        const total = parseInt(document.getElementById('totalData').innerText);
+        if (total === 0) {
+            addLog('⚠️ Upload file Excel terlebih dahulu!', 'warning');
+            return;
+        }
+        
+        if (eventSource) eventSource.close();
+        
+        totalProcessed = 0;
+        successTotal = 0;
+        failTotal = 0;
+        saldoTotal = 0;
+        updateStats();
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('downloadBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+        
+        addLog('🚀 Memulai proses pengecekan...', 'info');
+        
+        eventSource = new EventSource('/start');
+        
+        eventSource.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                switch(data.type) {
+                    case 'start':
+                        addLog('✅ Bot siap, total data: ' + data.total, 'success');
+                        break;
+                    case 'progress':
+                        updateProgress(data.percent);
+                        addLog('⏳ Progress: ' + data.current + '/' + data.total + ' - KPJ: ' + (data.kpj || '-'), 'info');
+                        break;
+                    case 'result':
+                        handleResult(data.data);
+                        break;
+                    case 'log':
+                        addLog(data.message, 'info');
+                        break;
+                    case 'done':
+                        addLog('🎉 Selesai! ' + data.message, 'success');
+                        addLog('📊 Total data dengan saldo: ' + saldoTotal, 'success');
+                        document.getElementById('downloadBtn').disabled = false;
+                        eventSource.close();
+                        eventSource = null;
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('stopBtn').disabled = true;
+                        break;
+                    case 'error':
+                        addLog('❌ Error: ' + data.message, 'error');
+                        eventSource.close();
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('stopBtn').disabled = true;
+                        break;
+                    case 'stop':
+                        addLog('⛔ ' + data.message, 'warning');
+                        eventSource.close();
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('stopBtn').disabled = true;
+                        break;
+                }
+            } catch(err) {
+                console.error('Parse error:', err);
+            }
+        };
+        
+        eventSource.onerror = function() {
+            addLog('❌ Koneksi server terputus', 'error');
+            if (eventSource) eventSource.close();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        };
+    }
+    
+    function handleResult(data) {
+        totalProcessed++;
+        if (data.status === 'SUKSES') {
+            successTotal++;
+            if (data.saldo_jht !== 'Rp 0') saldoTotal++;
+        } else {
+            failTotal++;
+        }
+        updateStats();
+        
+        const statusIcon = data.status === 'SUKSES' ? '✅' : '❌';
+        addLog(`${statusIcon} ${data.kpj} - ${data.status} | Saldo: ${data.saldo_jht} | ${data.keterangan}`, 
+               data.status === 'SUKSES' ? 'success' : 'error');
+    }
+    
+    function updateStats() {
+        document.getElementById('successCount').innerText = successTotal;
+        document.getElementById('failCount').innerText = failTotal;
+        document.getElementById('saldoCount').innerText = saldoTotal;
+    }
+    
+    function updateProgress(percent) {
+        const progressBar = document.getElementById('progressBar');
+        progressBar.style.width = percent + '%';
+        progressBar.innerText = Math.round(percent) + '%';
+    }
+    
+    function stopProcess() {
+        fetch('/stop', { method: 'POST' })
+            .then(() => addLog('⛔ Proses dihentikan oleh user', 'warning'));
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+    }
+    
+    function downloadResult() {
+        window.location.href = '/download';
+        addLog('📑 Download laporan hasil...', 'info');
+    }
+    
+    function addLog(message, type = 'info') {
+        const logArea = document.getElementById('logArea');
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry log-${type}`;
+        const time = new Date().toLocaleTimeString('id-ID');
+        const icon = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' }[type] || '📝';
+        logEntry.innerHTML = `<span style="color: #888;">[${time}]</span> ${icon} ${message}`;
+        logArea.insertBefore(logEntry, logArea.firstChild);
+        
+        while (logArea.children.length > 100) logArea.removeChild(logArea.lastChild);
+    }
+</script>
+</body>
+</html>''')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -960,9 +1235,6 @@ def start():
                         gagal_count += 1
                         print(f"❌ {nik} - {status_jmo}")
                     
-                    # Tampilkan ringkasan singkat di console (tanpa menunggu)
-                    print(f"📊 Hasil: {nik} - {status_jmo} - {saldo}")
-                    
                     clear_form_fields()
                     time.sleep(0.9)
                     
@@ -1049,6 +1321,7 @@ if __name__ == '__main__':
     print("   3. ✅ PROSES LANJUT OTOMATIS KE DATA BERIKUTNYA")
     print("   4. ✅ DETEKSI KOLOM OTOMATIS")
     print("   5. ✅ EKSTRAK SALDO JHT (3 STRATEGI)")
+    print("   6. ✅ KONFIGURASI CHROME SELENIUM YANG BENAR")
     print("="*60)
     print("\n📊 FORMAT EXCEL FLEKSIBEL:")
     print("   - NIK: cari kata kunci 'nik', 'ktp' ATAU angka 16 digit")
