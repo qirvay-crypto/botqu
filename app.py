@@ -5,6 +5,8 @@ import json
 import datetime
 import re
 import threading
+import os
+os.environ["PATH"] += ":/usr/bin"
 from flask import Flask, render_template, request, Response, send_file, jsonify
 
 from selenium import webdriver
